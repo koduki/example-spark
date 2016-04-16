@@ -1,0 +1,7 @@
+1,Modi,Narender Modi
+2,Kohali,Virat Kohali
+3,Ved,Ved Prakash Singh
+4,justinbieber,Justin Bieber
+6,Sachin,Sachin Tendulkar
+7,Salman,Salman khan
+8,Kejriwal
