@@ -15,12 +15,13 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.RecordReader;
+import scala.Tuple2;
 
 /**
  *
  * @author koduki
  */
-public class FixedLenghthRecordReader implements RecordReader<LongWritable, BytesWritable> {
+public class FixedLengthRecordReader implements RecordReader<LongWritable, BytesWritable> {
 
     private final int recordLength;
     private final FSDataInputStream input;
@@ -28,7 +29,7 @@ public class FixedLenghthRecordReader implements RecordReader<LongWritable, Byte
     private long pos;
     private long end;
 
-    public FixedLenghthRecordReader(FileSplit split, Configuration job) throws IOException {
+    public FixedLengthRecordReader(FileSplit split, Configuration job) throws IOException {
         Path file = split.getPath();
         FileSystem fs = file.getFileSystem(job);
 
@@ -38,9 +39,8 @@ public class FixedLenghthRecordReader implements RecordReader<LongWritable, Byte
         this.input = fs.open(file);
 
         int fraction = (int) (this.start % this.recordLength);
-        if (this.start != 0) {
-            skip(fraction);
-        }
+        skip(fraction);
+
         this.pos = this.start;
     }
 
@@ -48,12 +48,12 @@ public class FixedLenghthRecordReader implements RecordReader<LongWritable, Byte
     public boolean next(LongWritable key, BytesWritable value) throws IOException {
         if (this.pos < this.end) {
             key.set(this.pos);
-            ByteBuffer buff = ByteBuffer.allocate(this.recordLength);
-            boolean result = readLine(this.input, this.recordLength, buff);
-            if (result) {
-                setValue(buff, value);
+
+            Tuple2<Boolean, ByteBuffer> record = readLine(this.input, this.recordLength);
+            if (record._1()) {
+                setValue(record._2(), value);
             }
-            return result;
+            return record._1();
         }
         return false;
     }
@@ -93,13 +93,18 @@ public class FixedLenghthRecordReader implements RecordReader<LongWritable, Byte
         this.start -= fraction;
         this.input.seek(this.start);
         if (fraction != 0) {
-            ByteBuffer buffer = ByteBuffer.allocate(this.recordLength);
-            readLine(this.input, this.recordLength, buffer);
-            this.start += buffer.array().length;
+            Tuple2<Boolean, ByteBuffer> record = readLine(this.input, this.recordLength);
+            this.start += record._2().array().length;
         }
     }
 
-    private boolean readLine(FSDataInputStream in, int length, ByteBuffer result) throws IOException {
+    private Tuple2<Boolean, ByteBuffer> readLine(FSDataInputStream in, int length) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(this.recordLength);
+        boolean result = _readLine(in, length, buffer);
+        return new Tuple2<>(result, buffer);
+    }
+
+    private boolean _readLine(FSDataInputStream in, int length, ByteBuffer result) throws IOException {
         byte[] buff = new byte[length];
         int newSize = in.read(buff);
         if (newSize <= 0) {
@@ -109,7 +114,7 @@ public class FixedLenghthRecordReader implements RecordReader<LongWritable, Byte
         if (length != newSize) {
             byte[] tmp = trim(buff, newSize);
             result.put(tmp);
-            readLine(in, length - newSize, result);
+            _readLine(in, length - newSize, result);
         } else {
             result.put(buff);
         }

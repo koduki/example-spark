@@ -19,11 +19,11 @@ import org.apache.hadoop.mapred.Reporter;
  *
  * @author koduki
  */
-public class FixedLenghthRecordInputFormat extends FileInputFormat<LongWritable, BytesWritable> {
+public class FixedLengthRecordInputFormat extends FileInputFormat<LongWritable, BytesWritable> {
 
     @Override
     public RecordReader<LongWritable, BytesWritable> getRecordReader(InputSplit split, JobConf jc, Reporter rprtr) throws IOException {
-        return new FixedLenghthRecordReader((FileSplit)split, jc);
+        return new FixedLengthRecordReader((FileSplit) split, jc);
     }
 
 }
